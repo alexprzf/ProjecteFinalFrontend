@@ -1,0 +1,101 @@
+class MyDynamicPOR implements es.isigma.portasigma.dispatcher.descriptor.DPORv1 {
+
+    java.util.regex.Pattern patternName,patternVid,patternEmail,patternDNI;
+    java.util.regex.Matcher matchName,matchEmail,matchDNI,matchVid;  
+    def name = "";
+    def email = "";
+    def DNI = "";
+    def count = 1;
+    def vid = "";
+    def matched = true;
+    def isVid;
+    
+    public MyDynamicPOR(){
+        
+    }
+
+
+    public String getPOR (java.io.File pdf){
+        def document=org.apache.pdfbox.pdmodel.PDDocument.load(pdf);
+        def stripper=new org.apache.pdfbox.util.PDFTextStripper();
+        def text=stripper.getText(document);    
+        //System.out.println(text);
+
+        def por=
+            "title: *\n"+
+            "comments: \n"+
+            "sorted: true\n"+    
+            "visible: true\n" +
+            "visiblePattern: default\n" +
+            "signers:\n";
+                    
+
+        //System.out.println(docText);
+
+        while(matched){
+            patternVid = java.util.regex.Pattern.compile("\\["+count+"] VS:(.*)\\[/"+count+"]");
+            patternDNI = java.util.regex.Pattern.compile("\\["+count+"] \\{CS:(.*)\\[/"+count+"]");
+            patternName = java.util.regex.Pattern.compile("\\["+count+"] N:(.*)\\[/"+count+"]");
+            patternEmail = java.util.regex.Pattern.compile("\\["+count+"] M:(.*)\\[/"+count+"]");
+            
+            matchName = patternName.matcher(text);
+            matchEmail = patternEmail.matcher(text);
+            matchDNI = patternDNI.matcher(text);
+            matchVid = patternVid.matcher(text);
+
+            matched = matchName.find();
+            matchEmail.find();
+            matchDNI.find();
+            isVid = matchVid.find();
+
+            if(matched){
+
+                name = matchName.group(0);
+                email = matchEmail.group(0);
+                DNI = matchDNI.group(0);
+
+                name = name.substring(name.indexOf("N:")+2,name.indexOf("[/"));
+                email = email.substring(email.indexOf("M:")+2,email.indexOf("[/"));
+                DNI = DNI.substring(DNI.indexOf("CS:")+3,DNI.indexOf("}"));
+
+                if(!isVid){
+                    System.out.println("Firma amb certificat:\n\n");
+                    System.out.println("Correu: "+email);
+                    System.out.println("Nom: "+name);
+                    System.out.println("DNI: "+DNI);
+
+                    por=por+
+                        "  - name: "+name+"\n"+
+                        "    email: "+ email + "\n"+
+                        "    country: ES\n"+    
+                        "    identifier: "+DNI+"\n";
+
+                }else{
+                    vid = matchVid.group(0);
+                    System.out.println("Firma amb Vid:\n\n");
+                    System.out.println("Correu: "+email);
+                    System.out.println("Nom: "+name);
+                    System.out.println("DNI: "+DNI);
+                    System.out.println("VID: "+vid);
+                }
+            }
+            count++;
+        }
+
+        
+
+
+        
+
+        
+        
+        //System.out.println(por);    
+
+        return por;
+    }
+
+
+
+}
+
+return new MyDynamicPOR();
